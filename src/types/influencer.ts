@@ -51,27 +51,83 @@ export interface Campaign {
   influencers: CampaignInfluencer[];
 }
 
+export type SubmissionType = 'creator' | 'agency';
+
+export type PrimaryPlatform = 'YouTube' | 'Instagram' | 'Both';
+
+export type CollaborationFormat = 'Reel' | 'Post' | 'Story' | 'Video' | 'Shorts' | 'Carousel' | 'Live';
+
+export type PriceRange =
+  | 'Under ₹5,000'
+  | '₹5,000 – ₹15,000'
+  | '₹15,000 – ₹50,000'
+  | '₹50,000 – ₹1,00,000'
+  | '₹1,00,000 – ₹3,00,000'
+  | '₹3,00,000+';
+
+export const PRICE_RANGES: PriceRange[] = [
+  'Under ₹5,000', '₹5,000 – ₹15,000', '₹15,000 – ₹50,000',
+  '₹50,000 – ₹1,00,000', '₹1,00,000 – ₹3,00,000', '₹3,00,000+',
+];
+
+export const COLLABORATION_FORMATS: CollaborationFormat[] = [
+  'Reel', 'Post', 'Story', 'Video', 'Shorts', 'Carousel', 'Live',
+];
+
+export const PRIMARY_PLATFORMS: PrimaryPlatform[] = ['YouTube', 'Instagram', 'Both'];
+
 export interface InfluencerSubmission {
   id: string;
+  type: 'creator';
   name: string;
+  primaryPlatform: PrimaryPlatform;
   youtubeUrl: string;
   instagramUrl: string;
-  niche: Niche;
+  niches: Niche[];
   followers: number;
   avgViews: number;
+  engagementRate: number;
   country: string;
+  audienceCountry: string;
   language: string;
   email: string;
-  collaborationPreferences: string;
-  costRange: string;
+  phone: string;
+  collaborationFormats: CollaborationFormat[];
+  priceRange: PriceRange;
   bio: string;
+  consentContact: boolean;
   submittedAt: string;
   reviewed: boolean;
 }
 
+export interface AgencySubmission {
+  id: string;
+  type: 'agency';
+  agencyName: string;
+  website: string;
+  country: string;
+  primaryMarkets: string;
+  nichesCovered: Niche[];
+  creatorCount: string;
+  platformsCovered: PrimaryPlatform;
+  contactPerson: string;
+  contactEmail: string;
+  phone: string;
+  notableBrands: string;
+  rosterLink: string;
+  notes: string;
+  consentContact: boolean;
+  submittedAt: string;
+  reviewed: boolean;
+}
+
+export type AnySubmission = InfluencerSubmission | AgencySubmission;
+
 export const NICHES: Niche[] = [
   'Fashion', 'Tech', 'Fitness', 'Food', 'Gaming', 'Beauty', 'Education', 'Travel', 'Lifestyle', 'Music',
 ];
+
+export const CREATOR_COUNT_OPTIONS = ['1–10', '11–50', '51–200', '200+'];
 
 export const STATUSES: Status[] = ['Not Reviewed', 'Shortlisted', 'Planned', 'Contacted', 'Confirmed', 'Rejected'];
 
