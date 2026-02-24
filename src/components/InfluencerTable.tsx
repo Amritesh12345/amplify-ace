@@ -13,7 +13,9 @@ interface Props {
 const statusColors: Record<Status, string> = {
   'Not Reviewed': 'bg-muted text-muted-foreground',
   'Shortlisted': 'bg-success/15 text-success',
+  'Planned': 'bg-accent/15 text-accent',
   'Contacted': 'bg-info/15 text-info',
+  'Confirmed': 'bg-success/25 text-success',
   'Rejected': 'bg-destructive/15 text-destructive',
 };
 

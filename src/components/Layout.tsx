@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Users, Star, LayoutDashboard } from 'lucide-react';
+import { Users, Star, LayoutDashboard, Megaphone, Database, Inbox } from 'lucide-react';
 
 interface LayoutProps {
   children: ReactNode;
@@ -9,6 +9,9 @@ interface LayoutProps {
 const navItems = [
   { to: '/', label: 'Discovery', icon: LayoutDashboard },
   { to: '/shortlist', label: 'Shortlist', icon: Star },
+  { to: '/campaign', label: 'Campaign Builder', icon: Megaphone },
+  { to: '/influencers', label: 'Influencers', icon: Database },
+  { to: '/submissions', label: 'Submissions', icon: Inbox },
 ];
 
 export default function Layout({ children }: LayoutProps) {
@@ -25,7 +28,7 @@ export default function Layout({ children }: LayoutProps) {
             </div>
             <div>
               <h1 className="text-sm font-semibold text-sidebar-foreground">InfluenceHQ</h1>
-              <p className="text-[11px] text-sidebar-foreground/60">Discovery Platform</p>
+              <p className="text-[11px] text-sidebar-foreground/60">Campaign Platform</p>
             </div>
           </div>
         </div>
@@ -49,7 +52,9 @@ export default function Layout({ children }: LayoutProps) {
           })}
         </nav>
         <div className="p-4 border-t border-sidebar-border">
-          <p className="text-[11px] text-sidebar-foreground/40">Marketing Team Tool</p>
+          <Link to="/signup" className="text-[11px] text-sidebar-foreground/40 hover:text-sidebar-foreground/70 transition-colors">
+            Creator Signup →
+          </Link>
         </div>
       </aside>
 
