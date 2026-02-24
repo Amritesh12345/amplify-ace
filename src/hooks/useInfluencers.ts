@@ -1,10 +1,11 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Influencer, Filters, Status, Campaign, CampaignInfluencer, InfluencerSubmission } from '@/types/influencer';
+import { Influencer, Filters, Status, Campaign, CampaignInfluencer, InfluencerSubmission, AgencySubmission, AnySubmission } from '@/types/influencer';
 import { mockInfluencers } from '@/data/mockInfluencers';
 
 const STORAGE_KEY = 'influencer-data';
 const CAMPAIGNS_KEY = 'campaigns-data';
 const SUBMISSIONS_KEY = 'submissions-data';
+const AGENCY_SUBMISSIONS_KEY = 'agency-submissions-data';
 
 function loadInfluencers(): Influencer[] {
   try {
@@ -30,7 +31,7 @@ function saveCampaigns(data: Campaign[]) {
   localStorage.setItem(CAMPAIGNS_KEY, JSON.stringify(data));
 }
 
-function loadSubmissions(): InfluencerSubmission[] {
+function loadCreatorSubmissions(): InfluencerSubmission[] {
   try {
     const stored = localStorage.getItem(SUBMISSIONS_KEY);
     if (stored) return JSON.parse(stored);
@@ -38,8 +39,20 @@ function loadSubmissions(): InfluencerSubmission[] {
   return [];
 }
 
-function saveSubmissions(data: InfluencerSubmission[]) {
+function saveCreatorSubmissions(data: InfluencerSubmission[]) {
   localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(data));
+}
+
+function loadAgencySubmissions(): AgencySubmission[] {
+  try {
+    const stored = localStorage.getItem(AGENCY_SUBMISSIONS_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return [];
+}
+
+function saveAgencySubmissions(data: AgencySubmission[]) {
+  localStorage.setItem(AGENCY_SUBMISSIONS_KEY, JSON.stringify(data));
 }
 
 export const defaultFilters: Filters = {
@@ -170,32 +183,72 @@ export function useCampaigns() {
 }
 
 export function useSubmissions() {
-  const [submissions, setSubmissions] = useState<InfluencerSubmission[]>(loadSubmissions);
+  const [creatorSubs, setCreatorSubs] = useState<InfluencerSubmission[]>(loadCreatorSubmissions);
+  const [agencySubs, setAgencySubs] = useState<AgencySubmission[]>(loadAgencySubmissions);
 
-  const updateAll = useCallback((next: InfluencerSubmission[]) => {
-    setSubmissions(next);
-    saveSubmissions(next);
+  const updateCreators = useCallback((next: InfluencerSubmission[]) => {
+    setCreatorSubs(next);
+    saveCreatorSubmissions(next);
   }, []);
 
-  const addSubmission = useCallback((sub: Omit<InfluencerSubmission, 'id' | 'submittedAt' | 'reviewed'>) => {
+  const updateAgencies = useCallback((next: AgencySubmission[]) => {
+    setAgencySubs(next);
+    saveAgencySubmissions(next);
+  }, []);
+
+  const addCreatorSubmission = useCallback((sub: Omit<InfluencerSubmission, 'id' | 'submittedAt' | 'reviewed' | 'type'>) => {
     const newSub: InfluencerSubmission = {
       ...sub,
+      type: 'creator',
       id: crypto.randomUUID(),
       submittedAt: new Date().toISOString(),
       reviewed: false,
     };
-    updateAll([newSub, ...submissions]);
-  }, [submissions, updateAll]);
+    updateCreators([newSub, ...creatorSubs]);
+  }, [creatorSubs, updateCreators]);
 
-  const markReviewed = useCallback((id: string) => {
-    updateAll(submissions.map(s => s.id === id ? { ...s, reviewed: true } : s));
-  }, [submissions, updateAll]);
+  const addAgencySubmission = useCallback((sub: Omit<AgencySubmission, 'id' | 'submittedAt' | 'reviewed' | 'type'>) => {
+    const newSub: AgencySubmission = {
+      ...sub,
+      type: 'agency',
+      id: crypto.randomUUID(),
+      submittedAt: new Date().toISOString(),
+      reviewed: false,
+    };
+    updateAgencies([newSub, ...agencySubs]);
+  }, [agencySubs, updateAgencies]);
 
-  const deleteSubmission = useCallback((id: string) => {
-    updateAll(submissions.filter(s => s.id !== id));
-  }, [submissions, updateAll]);
+  const markReviewed = useCallback((id: string, subType: 'creator' | 'agency') => {
+    if (subType === 'creator') {
+      updateCreators(creatorSubs.map(s => s.id === id ? { ...s, reviewed: true } : s));
+    } else {
+      updateAgencies(agencySubs.map(s => s.id === id ? { ...s, reviewed: true } : s));
+    }
+  }, [creatorSubs, agencySubs, updateCreators, updateAgencies]);
 
-  return { submissions, addSubmission, markReviewed, deleteSubmission };
+  const deleteSubmission = useCallback((id: string, subType: 'creator' | 'agency') => {
+    if (subType === 'creator') {
+      updateCreators(creatorSubs.filter(s => s.id !== id));
+    } else {
+      updateAgencies(agencySubs.filter(s => s.id !== id));
+    }
+  }, [creatorSubs, agencySubs, updateCreators, updateAgencies]);
+
+  const allSubmissions: AnySubmission[] = useMemo(() => {
+    return [...creatorSubs, ...agencySubs].sort((a, b) =>
+      new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime()
+    );
+  }, [creatorSubs, agencySubs]);
+
+  return {
+    submissions: allSubmissions,
+    creatorSubmissions: creatorSubs,
+    agencySubmissions: agencySubs,
+    addCreatorSubmission,
+    addAgencySubmission,
+    markReviewed,
+    deleteSubmission,
+  };
 }
 
 export function formatNumber(n: number): string {
