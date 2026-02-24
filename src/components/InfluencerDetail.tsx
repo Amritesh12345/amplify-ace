@@ -115,14 +115,24 @@ export default function InfluencerDetail({ influencer: inf, onClose, onUpdate, o
 
         {/* Actions */}
         <div className="flex gap-2 pt-2 border-t border-border">
-          {inf.status !== 'Shortlisted' && (
+          {inf.status !== 'Shortlisted' && inf.status !== 'Planned' && inf.status !== 'Confirmed' && (
             <Button
               size="sm"
               className="flex-1"
               onClick={() => onUpdate(inf.id, { status: 'Shortlisted' })}
             >
               <Star className="h-3.5 w-3.5 mr-1.5" />
-              Add to Shortlist
+              Shortlist
+            </Button>
+          )}
+          {inf.status === 'Shortlisted' && (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="flex-1"
+              onClick={() => onUpdate(inf.id, { status: 'Planned' })}
+            >
+              Plan for Campaign
             </Button>
           )}
           <Button

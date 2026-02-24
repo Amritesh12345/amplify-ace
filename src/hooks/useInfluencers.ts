@@ -1,8 +1,10 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Influencer, Filters, Status } from '@/types/influencer';
+import { Influencer, Filters, Status, Campaign, CampaignInfluencer, InfluencerSubmission } from '@/types/influencer';
 import { mockInfluencers } from '@/data/mockInfluencers';
 
 const STORAGE_KEY = 'influencer-data';
+const CAMPAIGNS_KEY = 'campaigns-data';
+const SUBMISSIONS_KEY = 'submissions-data';
 
 function loadInfluencers(): Influencer[] {
   try {
@@ -14,6 +16,30 @@ function loadInfluencers(): Influencer[] {
 
 function saveInfluencers(data: Influencer[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+function loadCampaigns(): Campaign[] {
+  try {
+    const stored = localStorage.getItem(CAMPAIGNS_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return [];
+}
+
+function saveCampaigns(data: Campaign[]) {
+  localStorage.setItem(CAMPAIGNS_KEY, JSON.stringify(data));
+}
+
+function loadSubmissions(): InfluencerSubmission[] {
+  try {
+    const stored = localStorage.getItem(SUBMISSIONS_KEY);
+    if (stored) return JSON.parse(stored);
+  } catch {}
+  return [];
+}
+
+function saveSubmissions(data: InfluencerSubmission[]) {
+  localStorage.setItem(SUBMISSIONS_KEY, JSON.stringify(data));
 }
 
 export const defaultFilters: Filters = {
@@ -74,11 +100,13 @@ export function useInfluencers() {
   }, [influencers, filters]);
 
   const shortlisted = useMemo(() => influencers.filter(i => i.status === 'Shortlisted'), [influencers]);
+  const campaignReady = useMemo(() => influencers.filter(i => i.status === 'Planned' || i.status === 'Confirmed'), [influencers]);
 
   return {
     influencers: filtered,
     allInfluencers: influencers,
     shortlisted,
+    campaignReady,
     filters,
     setFilters,
     addInfluencer,
@@ -86,6 +114,88 @@ export function useInfluencers() {
     deleteInfluencer,
     importInfluencers,
   };
+}
+
+export function useCampaigns() {
+  const [campaigns, setCampaigns] = useState<Campaign[]>(loadCampaigns);
+
+  const updateAll = useCallback((next: Campaign[]) => {
+    setCampaigns(next);
+    saveCampaigns(next);
+  }, []);
+
+  const createCampaign = useCallback((name: string, influencerIds: string[], allInfluencers: Influencer[]) => {
+    const campaignInfluencers: CampaignInfluencer[] = influencerIds.map(id => {
+      const inf = allInfluencers.find(i => i.id === id);
+      return {
+        influencerId: id,
+        deliverable: 'Reel' as const,
+        proposedCost: 0,
+        expectedViews: inf?.avgViews || 0,
+        expectedEngagement: inf ? Math.round(inf.avgViews * inf.engagementRate / 100) : 0,
+        notes: '',
+      };
+    });
+    const campaign: Campaign = {
+      id: crypto.randomUUID(),
+      name,
+      createdAt: new Date().toISOString(),
+      influencers: campaignInfluencers,
+    };
+    updateAll([campaign, ...campaigns]);
+    return campaign;
+  }, [campaigns, updateAll]);
+
+  const updateCampaign = useCallback((id: string, data: Partial<Campaign>) => {
+    updateAll(campaigns.map(c => c.id === id ? { ...c, ...data } : c));
+  }, [campaigns, updateAll]);
+
+  const deleteCampaign = useCallback((id: string) => {
+    updateAll(campaigns.filter(c => c.id !== id));
+  }, [campaigns, updateAll]);
+
+  const duplicateCampaign = useCallback((id: string) => {
+    const original = campaigns.find(c => c.id === id);
+    if (!original) return;
+    const dup: Campaign = {
+      ...original,
+      id: crypto.randomUUID(),
+      name: `${original.name} (Copy)`,
+      createdAt: new Date().toISOString(),
+    };
+    updateAll([dup, ...campaigns]);
+  }, [campaigns, updateAll]);
+
+  return { campaigns, createCampaign, updateCampaign, deleteCampaign, duplicateCampaign };
+}
+
+export function useSubmissions() {
+  const [submissions, setSubmissions] = useState<InfluencerSubmission[]>(loadSubmissions);
+
+  const updateAll = useCallback((next: InfluencerSubmission[]) => {
+    setSubmissions(next);
+    saveSubmissions(next);
+  }, []);
+
+  const addSubmission = useCallback((sub: Omit<InfluencerSubmission, 'id' | 'submittedAt' | 'reviewed'>) => {
+    const newSub: InfluencerSubmission = {
+      ...sub,
+      id: crypto.randomUUID(),
+      submittedAt: new Date().toISOString(),
+      reviewed: false,
+    };
+    updateAll([newSub, ...submissions]);
+  }, [submissions, updateAll]);
+
+  const markReviewed = useCallback((id: string) => {
+    updateAll(submissions.map(s => s.id === id ? { ...s, reviewed: true } : s));
+  }, [submissions, updateAll]);
+
+  const deleteSubmission = useCallback((id: string) => {
+    updateAll(submissions.filter(s => s.id !== id));
+  }, [submissions, updateAll]);
+
+  return { submissions, addSubmission, markReviewed, deleteSubmission };
 }
 
 export function formatNumber(n: number): string {
@@ -126,7 +236,7 @@ export function parseCSV(text: string): Omit<Influencer, 'id'>[] {
       followers: parseInt(cols[3]) || 0,
       avgViews: parseInt(cols[4]) || 0,
       engagementRate: parseFloat(cols[5]) || 0,
-      country: cols[6] || 'United States',
+      country: cols[6] || 'India',
       language: cols[7] || 'English',
       contactEmail: cols[8] || '',
       status: (cols[9] as Status) || 'Not Reviewed',

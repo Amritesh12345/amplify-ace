@@ -12,7 +12,9 @@ export type Niche =
   | 'Lifestyle'
   | 'Music';
 
-export type Status = 'Not Reviewed' | 'Shortlisted' | 'Contacted' | 'Rejected';
+export type Status = 'Not Reviewed' | 'Shortlisted' | 'Planned' | 'Contacted' | 'Confirmed' | 'Rejected';
+
+export type Deliverable = 'Reel' | 'Post' | 'Video' | 'Story' | 'Carousel' | 'Short' | 'Live';
 
 export interface Influencer {
   id: string;
@@ -20,8 +22,8 @@ export interface Influencer {
   platform: Platform;
   niche: Niche;
   followers: number;
-  avgViews: number; // avg views for YT, avg reach for IG
-  engagementRate: number; // percentage
+  avgViews: number;
+  engagementRate: number;
   country: string;
   language: string;
   contactEmail: string;
@@ -33,21 +35,58 @@ export interface Influencer {
   recentContent: string[];
 }
 
+export interface CampaignInfluencer {
+  influencerId: string;
+  deliverable: Deliverable;
+  proposedCost: number;
+  expectedViews: number;
+  expectedEngagement: number;
+  notes: string;
+}
+
+export interface Campaign {
+  id: string;
+  name: string;
+  createdAt: string;
+  influencers: CampaignInfluencer[];
+}
+
+export interface InfluencerSubmission {
+  id: string;
+  name: string;
+  youtubeUrl: string;
+  instagramUrl: string;
+  niche: Niche;
+  followers: number;
+  avgViews: number;
+  country: string;
+  language: string;
+  email: string;
+  collaborationPreferences: string;
+  costRange: string;
+  bio: string;
+  submittedAt: string;
+  reviewed: boolean;
+}
+
 export const NICHES: Niche[] = [
   'Fashion', 'Tech', 'Fitness', 'Food', 'Gaming', 'Beauty', 'Education', 'Travel', 'Lifestyle', 'Music',
 ];
 
-export const STATUSES: Status[] = ['Not Reviewed', 'Shortlisted', 'Contacted', 'Rejected'];
+export const STATUSES: Status[] = ['Not Reviewed', 'Shortlisted', 'Planned', 'Contacted', 'Confirmed', 'Rejected'];
 
 export const PLATFORMS: Platform[] = ['YouTube', 'Instagram'];
 
+export const DELIVERABLES: Deliverable[] = ['Reel', 'Post', 'Video', 'Story', 'Carousel', 'Short', 'Live'];
+
 export const COUNTRIES = [
-  'United States', 'United Kingdom', 'India', 'Brazil', 'Germany', 'France', 'Japan', 'South Korea',
+  'India', 'United States', 'United Kingdom', 'Brazil', 'Germany', 'France', 'Japan', 'South Korea',
   'Australia', 'Canada', 'Mexico', 'Spain', 'Italy', 'Indonesia', 'Nigeria',
 ];
 
 export const LANGUAGES = [
-  'English', 'Spanish', 'Portuguese', 'Hindi', 'French', 'German', 'Japanese', 'Korean', 'Italian', 'Indonesian',
+  'Hindi', 'English', 'Tamil', 'Telugu', 'Bengali', 'Marathi', 'Gujarati', 'Kannada',
+  'Spanish', 'Portuguese', 'French', 'German', 'Japanese', 'Korean', 'Italian', 'Indonesian',
 ];
 
 export interface Filters {
