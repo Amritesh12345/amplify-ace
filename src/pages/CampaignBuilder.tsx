@@ -10,7 +10,22 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Megaphone, Plus, Copy, Trash2, Download, Users, Eye, Heart, IndianRupee, Pencil } from 'lucide-react';
+
+const DELIVERABLE_OPTIONS = ['Reel', 'Story', 'Post', 'Video', 'Shorts', 'Carousel'] as const;
+
+interface DeliverableRow {
+  type: string;
+  cost: number;
+  enabled: boolean;
+}
+
+interface InfluencerDeliverables {
+  influencerId: string;
+  deliverables: DeliverableRow[];
+  notes: string;
+}
 
 export default function CampaignBuilder() {
   const { campaignReady, allInfluencers } = useInfluencers();
@@ -21,7 +36,33 @@ export default function CampaignBuilder() {
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameName, setRenameName] = useState('');
 
+  // Local deliverables state (per influencer, multiple deliverables)
+  const [localDeliverables, setLocalDeliverables] = useState<Record<string, InfluencerDeliverables>>({});
+
   const activeCampaign = campaigns.find(c => c.id === activeCampaignId) || null;
+
+  const getInfluencer = (id: string) => allInfluencers.find(i => i.id === id);
+
+  const getDeliverables = (influencerId: string, inf: Influencer): DeliverableRow[] => {
+    if (localDeliverables[influencerId]) return localDeliverables[influencerId].deliverables;
+    const estReel = Math.round(inf.avgViews * 0.15);
+    const estStory = Math.round(inf.avgViews * 0.05);
+    const estYT = Math.round(inf.avgViews * 0.30);
+    return [
+      { type: 'Reel', cost: estReel, enabled: true },
+      { type: 'Story', cost: estStory, enabled: false },
+      { type: 'Video', cost: estYT, enabled: inf.platform === 'YouTube' },
+    ];
+  };
+
+  const updateDeliverable = (influencerId: string, inf: Influencer, idx: number, data: Partial<DeliverableRow>) => {
+    const current = getDeliverables(influencerId, inf);
+    const updated = current.map((d, i) => i === idx ? { ...d, ...data } : d);
+    setLocalDeliverables(prev => ({
+      ...prev,
+      [influencerId]: { influencerId, deliverables: updated, notes: prev[influencerId]?.notes || '' },
+    }));
+  };
 
   const handleCreate = () => {
     if (!newName.trim()) return;
@@ -30,40 +71,50 @@ export default function CampaignBuilder() {
     setActiveCampaignId(campaign.id);
     setNewName('');
     setShowCreate(false);
+    setLocalDeliverables({});
   };
 
-  const updateRow = (campaignId: string, influencerId: string, data: Partial<CampaignInfluencer>) => {
-    const campaign = campaigns.find(c => c.id === campaignId);
-    if (!campaign) return;
-    const updatedInfs = campaign.influencers.map(ci =>
-      ci.influencerId === influencerId ? { ...ci, ...data } : ci
-    );
-    updateCampaign(campaignId, { influencers: updatedInfs });
-  };
+  // Summary calculations
+  const summary = activeCampaign ? (() => {
+    let totalCost = 0;
+    let totalFollowers = 0;
+    let totalImpressions = 0;
+    let totalEngagement = 0;
 
-  const getInfluencer = (id: string) => allInfluencers.find(i => i.id === id);
-
-  const summary = activeCampaign ? {
-    count: activeCampaign.influencers.length,
-    totalFollowers: activeCampaign.influencers.reduce((sum, ci) => {
+    activeCampaign.influencers.forEach(ci => {
       const inf = getInfluencer(ci.influencerId);
-      return sum + (inf?.followers || 0);
-    }, 0),
-    totalImpressions: activeCampaign.influencers.reduce((sum, ci) => sum + ci.expectedViews, 0),
-    totalEngagement: activeCampaign.influencers.reduce((sum, ci) => sum + ci.expectedEngagement, 0),
-    totalCost: activeCampaign.influencers.reduce((sum, ci) => sum + ci.proposedCost, 0),
-  } : null;
+      if (!inf) return;
+      totalFollowers += inf.followers;
+      const dels = getDeliverables(ci.influencerId, inf);
+      dels.forEach(d => {
+        if (d.enabled) {
+          totalCost += d.cost;
+          totalImpressions += inf.avgViews;
+          totalEngagement += Math.round(inf.avgViews * inf.engagementRate / 100);
+        }
+      });
+    });
+
+    return {
+      count: activeCampaign.influencers.length,
+      totalFollowers,
+      totalImpressions,
+      totalEngagement,
+      totalCost,
+    };
+  })() : null;
 
   const exportCampaignCSV = () => {
     if (!activeCampaign) return;
-    const headers = ['Influencer', 'Platform', 'Followers', 'Deliverable', 'Cost (₹)', 'Expected Views', 'Expected Engagement', 'Notes'];
-    const rows = activeCampaign.influencers.map(ci => {
+    const headers = ['Influencer', 'Platform', 'Followers', 'Deliverable', 'Cost (₹)', 'Enabled'];
+    const rows: string[][] = [];
+    activeCampaign.influencers.forEach(ci => {
       const inf = getInfluencer(ci.influencerId);
-      return [
-        inf?.name || 'Unknown', inf?.platform || '', inf?.followers || 0,
-        ci.deliverable, ci.proposedCost, ci.expectedViews, ci.expectedEngagement,
-        `"${ci.notes.replace(/"/g, '""')}"`,
-      ];
+      if (!inf) return;
+      const dels = getDeliverables(ci.influencerId, inf);
+      dels.forEach(d => {
+        rows.push([inf.name, inf.platform, String(inf.followers), d.type, String(d.cost), d.enabled ? 'Yes' : 'No']);
+      });
     });
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     downloadCSV(csv, `${activeCampaign.name}.csv`);
@@ -79,20 +130,16 @@ export default function CampaignBuilder() {
   return (
     <Layout>
       <div className="p-6 space-y-5 overflow-auto h-full">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
               <Megaphone className="h-6 w-6 text-primary" />
               Campaign Builder
             </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Plan campaigns with your shortlisted influencers
-            </p>
+            <p className="text-sm text-muted-foreground mt-0.5">Plan campaigns with deliverables and live budget tracking</p>
           </div>
           <Button size="sm" onClick={() => setShowCreate(true)}>
-            <Plus className="h-4 w-4 mr-1.5" />
-            New Campaign
+            <Plus className="h-4 w-4 mr-1.5" /> New Campaign
           </Button>
         </div>
 
@@ -101,23 +148,12 @@ export default function CampaignBuilder() {
           <div className="flex gap-2 flex-wrap">
             {campaigns.map(c => (
               <div key={c.id} className="flex items-center gap-1">
-                <Badge
-                  variant={activeCampaignId === c.id ? 'default' : 'outline'}
-                  className="cursor-pointer select-none px-3 py-1.5"
-                  onClick={() => setActiveCampaignId(c.id)}
-                >
+                <Badge variant={activeCampaignId === c.id ? 'default' : 'outline'} className="cursor-pointer select-none px-3 py-1.5" onClick={() => { setActiveCampaignId(c.id); setLocalDeliverables({}); }}>
                   {c.name}
                 </Badge>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setRenameId(c.id); setRenameName(c.name); }}>
-                  <Pencil className="h-3 w-3" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => duplicateCampaign(c.id)}>
-                  <Copy className="h-3 w-3" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => {
-                  deleteCampaign(c.id);
-                  if (activeCampaignId === c.id) setActiveCampaignId(campaigns.find(x => x.id !== c.id)?.id || null);
-                }}>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setRenameId(c.id); setRenameName(c.name); }}><Pencil className="h-3 w-3" /></Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => duplicateCampaign(c.id)}><Copy className="h-3 w-3" /></Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => { deleteCampaign(c.id); if (activeCampaignId === c.id) setActiveCampaignId(campaigns.find(x => x.id !== c.id)?.id || null); }}>
                   <Trash2 className="h-3 w-3" />
                 </Button>
               </div>
@@ -136,113 +172,86 @@ export default function CampaignBuilder() {
           </div>
         )}
 
-        {/* Campaign table */}
+        {/* Campaign table with deliverables */}
         {activeCampaign && activeCampaign.influencers.length > 0 ? (
           <>
             <div className="flex justify-end">
               <Button variant="outline" size="sm" onClick={exportCampaignCSV}>
-                <Download className="h-4 w-4 mr-1.5" />
-                Export CSV
+                <Download className="h-4 w-4 mr-1.5" /> Export CSV
               </Button>
             </div>
-            <div className="border border-border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="bg-muted/50">
-                    <TableHead className="w-[220px]">Influencer</TableHead>
-                    <TableHead>Platform</TableHead>
-                    <TableHead>Followers</TableHead>
-                    <TableHead>Deliverable</TableHead>
-                    <TableHead>Cost (₹)</TableHead>
-                    <TableHead>Expected Views</TableHead>
-                    <TableHead>Expected Engagement</TableHead>
-                    <TableHead>Notes</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {activeCampaign.influencers.map(ci => {
-                    const inf = getInfluencer(ci.influencerId);
-                    if (!inf) return null;
-                    return (
-                      <TableRow key={ci.influencerId}>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-8 w-8">
-                              <AvatarImage src={inf.profilePhoto} alt={inf.name} />
-                              <AvatarFallback className="text-xs">{inf.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <p className="font-medium text-sm">{inf.name}</p>
-                              <p className="text-xs text-muted-foreground">{inf.niche}</p>
+            <div className="space-y-4">
+              {activeCampaign.influencers.map(ci => {
+                const inf = getInfluencer(ci.influencerId);
+                if (!inf) return null;
+                const dels = getDeliverables(ci.influencerId, inf);
+                const totalForInf = dels.filter(d => d.enabled).reduce((s, d) => s + d.cost, 0);
+
+                return (
+                  <Card key={ci.influencerId}>
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10 ring-2 ring-border">
+                            <AvatarImage src={inf.profilePhoto} alt={inf.name} />
+                            <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">{inf.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-sm">{inf.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <Badge variant="outline" className="text-xs">{inf.platform}</Badge>
+                              <span className="text-xs text-muted-foreground">{formatNumber(inf.followers)} followers</span>
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell><Badge variant="outline" className="text-xs">{inf.platform}</Badge></TableCell>
-                        <TableCell className="text-sm">{formatNumber(inf.followers)}</TableCell>
-                        <TableCell>
-                          <Select value={ci.deliverable} onValueChange={(v: Deliverable) => updateRow(activeCampaign.id, ci.influencerId, { deliverable: v })}>
-                            <SelectTrigger className="h-8 w-28"><SelectValue /></SelectTrigger>
-                            <SelectContent>
-                              {DELIVERABLES.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                        </TableCell>
-                        <TableCell>
-                          <Input
-                            type="number"
-                            className="h-8 w-28"
-                            value={ci.proposedCost || ''}
-                            onChange={e => updateRow(activeCampaign.id, ci.influencerId, { proposedCost: parseInt(e.target.value) || 0 })}
-                            placeholder="0"
-                          />
-                        </TableCell>
-                        <TableCell className="text-sm">{formatNumber(ci.expectedViews)}</TableCell>
-                        <TableCell className="text-sm">{formatNumber(ci.expectedEngagement)}</TableCell>
-                        <TableCell>
-                          <Input
-                            className="h-8 w-36"
-                            value={ci.notes}
-                            onChange={e => updateRow(activeCampaign.id, ci.influencerId, { notes: e.target.value })}
-                            placeholder="Add note..."
-                          />
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                        </div>
+                        <p className="font-semibold text-sm">₹{formatNumber(totalForInf)}</p>
+                      </div>
+
+                      <div className="border border-border rounded-md overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-muted/30">
+                              <TableHead className="w-10"></TableHead>
+                              <TableHead>Deliverable</TableHead>
+                              <TableHead>Cost (₹)</TableHead>
+                              <TableHead className="text-right">Est. Views</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {dels.map((d, idx) => (
+                              <TableRow key={idx} className={!d.enabled ? 'opacity-40' : ''}>
+                                <TableCell>
+                                  <Checkbox checked={d.enabled} onCheckedChange={v => updateDeliverable(ci.influencerId, inf, idx, { enabled: !!v })} />
+                                </TableCell>
+                                <TableCell className="text-sm font-medium">{d.type}</TableCell>
+                                <TableCell>
+                                  <Input type="number" className="h-8 w-28" value={d.cost || ''} onChange={e => updateDeliverable(ci.influencerId, inf, idx, { cost: parseInt(e.target.value) || 0 })} />
+                                </TableCell>
+                                <TableCell className="text-right text-sm text-muted-foreground">{formatNumber(inf.avgViews)}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           </>
         ) : activeCampaign ? (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-            <Megaphone className="h-12 w-12 mb-3 opacity-30" />
-            <p className="text-lg font-medium">No influencers in this campaign</p>
-            <p className="text-sm">Mark influencers as "Planned" or "Confirmed" to include them</p>
-          </div>
+          <EmptyState text="No influencers in this campaign" sub='Mark influencers as "Planned" or "Confirmed" to include them' />
         ) : (
-          <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
-            <Megaphone className="h-12 w-12 mb-3 opacity-30" />
-            <p className="text-lg font-medium">No campaigns yet</p>
-            <p className="text-sm">Create a campaign to start planning</p>
-          </div>
+          <EmptyState text="No campaigns yet" sub="Create a campaign to start planning" />
         )}
 
-        {/* Create campaign dialog */}
+        {/* Create dialog */}
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
           <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>New Campaign</DialogTitle>
-            </DialogHeader>
+            <DialogHeader><DialogTitle>New Campaign</DialogTitle></DialogHeader>
             <div className="space-y-3">
-              <Input
-                placeholder="Campaign name"
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleCreate()}
-              />
-              <p className="text-xs text-muted-foreground">
-                {campaignReady.length} influencers with "Planned" or "Confirmed" status will be included.
-              </p>
+              <Input placeholder="Campaign name" value={newName} onChange={e => setNewName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleCreate()} />
+              <p className="text-xs text-muted-foreground">{campaignReady.length} influencers with "Planned" or "Confirmed" status will be included.</p>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
@@ -254,14 +263,8 @@ export default function CampaignBuilder() {
         {/* Rename dialog */}
         <Dialog open={!!renameId} onOpenChange={() => setRenameId(null)}>
           <DialogContent className="max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Rename Campaign</DialogTitle>
-            </DialogHeader>
-            <Input
-              value={renameName}
-              onChange={e => setRenameName(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleRename()}
-            />
+            <DialogHeader><DialogTitle>Rename Campaign</DialogTitle></DialogHeader>
+            <Input value={renameName} onChange={e => setRenameName(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleRename()} />
             <DialogFooter>
               <Button variant="outline" onClick={() => setRenameId(null)}>Cancel</Button>
               <Button onClick={handleRename} disabled={!renameName.trim()}>Rename</Button>
@@ -286,5 +289,15 @@ function SummaryCard({ icon: Icon, label, value }: { icon: any; label: string; v
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function EmptyState({ text, sub }: { text: string; sub: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+      <Megaphone className="h-12 w-12 mb-3 opacity-30" />
+      <p className="text-lg font-medium">{text}</p>
+      <p className="text-sm">{sub}</p>
+    </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Influencer, Status, STATUSES } from '@/types/influencer';
+import { Influencer, Status } from '@/types/influencer';
 import { formatNumber } from '@/hooks/useInfluencers';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,13 @@ const statusColors: Record<Status, string> = {
   'Rejected': 'bg-destructive/15 text-destructive',
 };
 
+function engagementColor(rate: number): string {
+  if (rate >= 7) return 'bg-success/15 text-success';
+  if (rate >= 4) return 'bg-info/15 text-info';
+  if (rate >= 2) return 'bg-warning/15 text-warning';
+  return 'bg-muted text-muted-foreground';
+}
+
 export default function InfluencerTable({ influencers, onSelect, selectedId }: Props) {
   if (influencers.length === 0) {
     return (
@@ -34,52 +41,63 @@ export default function InfluencerTable({ influencers, onSelect, selectedId }: P
       <Table>
         <TableHeader>
           <TableRow className="bg-muted/50">
-            <TableHead className="w-[250px]">Influencer</TableHead>
+            <TableHead className="w-[230px]">Influencer</TableHead>
             <TableHead>Platform</TableHead>
             <TableHead>Niche</TableHead>
             <TableHead className="text-right">Followers</TableHead>
             <TableHead className="text-right">Avg Views</TableHead>
             <TableHead className="text-right">Engagement</TableHead>
+            <TableHead className="text-right">Est. Reach</TableHead>
             <TableHead>Country</TableHead>
             <TableHead>Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {influencers.map(inf => (
-            <TableRow
-              key={inf.id}
-              className={`cursor-pointer transition-colors hover:bg-muted/30 ${selectedId === inf.id ? 'bg-primary/5' : ''}`}
-              onClick={() => onSelect(inf)}
-            >
-              <TableCell>
-                <div className="flex items-center gap-3">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={inf.profilePhoto} alt={inf.name} />
-                    <AvatarFallback className="text-xs">{inf.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-sm">{inf.name}</p>
-                    <p className="text-xs text-muted-foreground">{inf.contactEmail}</p>
+          {influencers.map(inf => {
+            const estReach = Math.round(inf.avgViews * 1.3);
+            return (
+              <TableRow
+                key={inf.id}
+                className={`cursor-pointer transition-colors hover:bg-muted/30 ${selectedId === inf.id ? 'bg-primary/5' : ''}`}
+                onClick={() => onSelect(inf)}
+              >
+                <TableCell>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8 ring-2 ring-border">
+                      <AvatarImage src={inf.profilePhoto} alt={inf.name} />
+                      <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">
+                        {inf.name.split(' ').map(n => n[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="font-medium text-sm">{inf.name}</p>
+                      <p className="text-xs text-muted-foreground">{inf.contactEmail}</p>
+                    </div>
                   </div>
-                </div>
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className="text-xs">
-                  {inf.platform}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-sm">{inf.niche}</TableCell>
-              <TableCell className="text-right text-sm font-medium">{formatNumber(inf.followers)}</TableCell>
-              <TableCell className="text-right text-sm">{formatNumber(inf.avgViews)}</TableCell>
-              <TableCell className="text-right text-sm font-medium">{inf.engagementRate}%</TableCell>
-              <TableCell className="text-sm">{inf.country}</TableCell>
-              <TableCell>
-                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[inf.status]}`}>
-                  {inf.status}
-                </span>
-              </TableCell>
-            </TableRow>
-          ))}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="text-xs">
+                    {inf.platform}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-sm">{inf.niche}</TableCell>
+                <TableCell className="text-right text-sm font-medium">{formatNumber(inf.followers)}</TableCell>
+                <TableCell className="text-right text-sm">{formatNumber(inf.avgViews)}</TableCell>
+                <TableCell className="text-right">
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ${engagementColor(inf.engagementRate)}`}>
+                    {inf.engagementRate}%
+                  </span>
+                </TableCell>
+                <TableCell className="text-right text-sm text-muted-foreground">{formatNumber(estReach)}</TableCell>
+                <TableCell className="text-sm">{inf.country}</TableCell>
+                <TableCell>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${statusColors[inf.status]}`}>
+                    {inf.status}
+                  </span>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

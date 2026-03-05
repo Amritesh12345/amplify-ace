@@ -1,6 +1,8 @@
 import { ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Users, Star, LayoutDashboard, Megaphone, Database, Inbox } from 'lucide-react';
+import { Users, Star, LayoutDashboard, Megaphone, Database, Inbox, Sparkles, Settings } from 'lucide-react';
+import { getSavedRole, clearRole } from '@/components/WelcomeModal';
+import { Button } from '@/components/ui/button';
 
 interface LayoutProps {
   children: ReactNode;
@@ -16,6 +18,7 @@ const navItems = [
 
 export default function Layout({ children }: LayoutProps) {
   const location = useLocation();
+  const role = getSavedRole();
 
   return (
     <div className="flex h-screen overflow-hidden">
@@ -24,11 +27,11 @@ export default function Layout({ children }: LayoutProps) {
         <div className="p-5 border-b border-sidebar-border">
           <div className="flex items-center gap-2.5">
             <div className="h-8 w-8 rounded-lg bg-sidebar-primary flex items-center justify-center">
-              <Users className="h-4 w-4 text-sidebar-primary-foreground" />
+              <Sparkles className="h-4 w-4 text-sidebar-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-sm font-semibold text-sidebar-foreground">InfluenceHQ</h1>
-              <p className="text-[11px] text-sidebar-foreground/60">Campaign Platform</p>
+              <h1 className="text-sm font-semibold text-sidebar-foreground">Amplify Ace</h1>
+              <p className="text-[11px] text-sidebar-foreground/60">Discovery & Campaign Platform</p>
             </div>
           </div>
         </div>
@@ -51,10 +54,20 @@ export default function Layout({ children }: LayoutProps) {
             );
           })}
         </nav>
-        <div className="p-4 border-t border-sidebar-border">
-          <Link to="/signup" className="text-[11px] text-sidebar-foreground/40 hover:text-sidebar-foreground/70 transition-colors">
-            Creator Signup →
+        <div className="p-4 border-t border-sidebar-border space-y-2">
+          <Link to="/signup" className="flex items-center gap-2 text-[11px] text-sidebar-foreground/60 hover:text-sidebar-foreground/90 transition-colors">
+            <Users className="h-3 w-3" />
+            Join as Creator / Agency
           </Link>
+          {role && (
+            <button
+              onClick={() => { clearRole(); window.location.reload(); }}
+              className="flex items-center gap-2 text-[11px] text-sidebar-foreground/40 hover:text-sidebar-foreground/70 transition-colors"
+            >
+              <Settings className="h-3 w-3" />
+              Change role ({role})
+            </button>
+          )}
         </div>
       </aside>
 
