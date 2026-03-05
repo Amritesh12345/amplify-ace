@@ -17,7 +17,8 @@ export default function InfluencerSignup() {
   const { addCreatorSubmission, addAgencySubmission } = useSubmissions();
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
-  const [type, setType] = useState<SubmissionType>('creator');
+  const [searchParams] = useSearchParams();
+  const [type, setType] = useState<SubmissionType>((searchParams.get('type') as SubmissionType) || 'creator');
 
   // Creator form
   const [creator, setCreator] = useState({
