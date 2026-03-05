@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { Influencer, Status } from '@/types/influencer';
 import { formatNumber } from '@/hooks/useInfluencers';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';

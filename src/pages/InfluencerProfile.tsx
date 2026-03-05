@@ -46,7 +46,15 @@ export default function InfluencerProfile() {
 
   const notes = id ? allNotes[id] || [] : [];
 
-  if (!influencer) {
+  const inf = influencer;
+  const fitScore = inf ? calculateCampaignFitScore(inf) : 0;
+  const followerGrowth = useMemo(() => inf ? generateFollowerGrowth(inf.followers) : [], [inf?.followers]);
+  const viewsPerPost = useMemo(() => inf ? generateViewsPerPost(inf.avgViews) : [], [inf?.avgViews]);
+  const engagementTrend = useMemo(() => inf ? generateEngagementTrend(inf.engagementRate) : [], [inf?.engagementRate]);
+  const audienceCountries = useMemo(() => inf ? generateAudienceData(inf.country) : [], [inf?.country]);
+  const recentPosts = useMemo(() => inf ? generateRecentPosts(inf.recentContent, inf.avgViews) : [], [inf?.recentContent, inf?.avgViews]);
+
+  if (!inf) {
     return (
       <Layout>
         <div className="flex items-center justify-center h-full">
@@ -60,14 +68,6 @@ export default function InfluencerProfile() {
       </Layout>
     );
   }
-
-  const inf = influencer;
-  const fitScore = calculateCampaignFitScore(inf);
-  const followerGrowth = useMemo(() => generateFollowerGrowth(inf.followers), [inf.followers]);
-  const viewsPerPost = useMemo(() => generateViewsPerPost(inf.avgViews), [inf.avgViews]);
-  const engagementTrend = useMemo(() => generateEngagementTrend(inf.engagementRate), [inf.engagementRate]);
-  const audienceCountries = useMemo(() => generateAudienceData(inf.country), [inf.country]);
-  const recentPosts = useMemo(() => generateRecentPosts(inf.recentContent, inf.avgViews), [inf.recentContent, inf.avgViews]);
 
   const reelPrice = editPrices.reel ?? Math.round(inf.avgViews * 0.15);
   const storyPrice = editPrices.story ?? Math.round(inf.avgViews * 0.06);

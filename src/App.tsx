@@ -9,6 +9,7 @@ import CampaignBuilder from "./pages/CampaignBuilder";
 import InfluencerDatabase from "./pages/InfluencerDatabase";
 import Submissions from "./pages/Submissions";
 import InfluencerSignup from "./pages/InfluencerSignup";
+import InfluencerProfile from "./pages/InfluencerProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/influencers" element={<InfluencerDatabase />} />
           <Route path="/submissions" element={<Submissions />} />
           <Route path="/signup" element={<InfluencerSignup />} />
+          <Route path="/influencer/:id" element={<InfluencerProfile />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
