@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { NICHES, COUNTRIES, LANGUAGES, COLLABORATION_FORMATS, PRICE_RANGES, PRIMARY_PLATFORMS, CREATOR_COUNT_OPTIONS, Niche, PrimaryPlatform, CollaborationFormat, PriceRange, SubmissionType } from '@/types/influencer';
 import { useSubmissions } from '@/hooks/useInfluencers';
 import { Button } from '@/components/ui/button';
@@ -16,7 +17,8 @@ export default function InfluencerSignup() {
   const { addCreatorSubmission, addAgencySubmission } = useSubmissions();
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
-  const [type, setType] = useState<SubmissionType>('creator');
+  const [searchParams] = useSearchParams();
+  const [type, setType] = useState<SubmissionType>((searchParams.get('type') as SubmissionType) || 'creator');
 
   // Creator form
   const [creator, setCreator] = useState({

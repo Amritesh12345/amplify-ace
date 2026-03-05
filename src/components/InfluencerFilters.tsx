@@ -14,6 +14,14 @@ interface Props {
   onChange: (f: Filters) => void;
 }
 
+const FOLLOWER_PRESETS = [
+  { label: '1K–10K', min: 1000, max: 10000 },
+  { label: '10K–50K', min: 10000, max: 50000 },
+  { label: '50K–100K', min: 50000, max: 100000 },
+  { label: '100K–500K', min: 100000, max: 500000 },
+  { label: '500K+', min: 500000, max: 10000000 },
+];
+
 export default function InfluencerFilters({ filters, onChange }: Props) {
   const [expanded, setExpanded] = useState(false);
 
@@ -71,12 +79,7 @@ export default function InfluencerFilters({ filters, onChange }: Props) {
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">Platform</label>
             <div className="flex gap-2">
               {PLATFORMS.map(p => (
-                <Badge
-                  key={p}
-                  variant={filters.platforms.includes(p) ? 'default' : 'outline'}
-                  className="cursor-pointer select-none"
-                  onClick={() => togglePlatform(p)}
-                >
+                <Badge key={p} variant={filters.platforms.includes(p) ? 'default' : 'outline'} className="cursor-pointer select-none" onClick={() => togglePlatform(p)}>
                   {p}
                 </Badge>
               ))}
@@ -85,48 +88,51 @@ export default function InfluencerFilters({ filters, onChange }: Props) {
 
           {/* Niche */}
           <div>
-            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">Niche</label>
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">Content Category / Niche</label>
             <div className="flex flex-wrap gap-2">
               {NICHES.map(n => (
-                <Badge
-                  key={n}
-                  variant={filters.niches.includes(n) ? 'default' : 'outline'}
-                  className="cursor-pointer select-none"
-                  onClick={() => toggleNiche(n)}
-                >
+                <Badge key={n} variant={filters.niches.includes(n) ? 'default' : 'outline'} className="cursor-pointer select-none" onClick={() => toggleNiche(n)}>
                   {n}
                 </Badge>
               ))}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Followers range */}
-            <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">
-                Followers: {formatNumber(filters.followersMin)} – {formatNumber(filters.followersMax)}
-              </label>
-              <Slider
-                min={0}
-                max={10000000}
-                step={10000}
-                value={[filters.followersMin, filters.followersMax]}
-                onValueChange={([min, max]) => onChange({ ...filters, followersMin: min, followersMax: max })}
-              />
+          {/* Follower presets */}
+          <div>
+            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">Follower Range</label>
+            <div className="flex flex-wrap gap-2">
+              {FOLLOWER_PRESETS.map(p => {
+                const active = filters.followersMin === p.min && filters.followersMax === p.max;
+                return (
+                  <Badge
+                    key={p.label}
+                    variant={active ? 'default' : 'outline'}
+                    className="cursor-pointer select-none"
+                    onClick={() => onChange({ ...filters, followersMin: active ? 0 : p.min, followersMax: active ? 10000000 : p.max })}
+                  >
+                    {p.label}
+                  </Badge>
+                );
+              })}
             </div>
+          </div>
 
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Engagement range */}
             <div>
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">
                 Engagement: {filters.engagementMin}% – {filters.engagementMax}%
               </label>
-              <Slider
-                min={0}
-                max={15}
-                step={0.1}
-                value={[filters.engagementMin, filters.engagementMax]}
-                onValueChange={([min, max]) => onChange({ ...filters, engagementMin: min, engagementMax: max })}
-              />
+              <Slider min={0} max={15} step={0.1} value={[filters.engagementMin, filters.engagementMax]} onValueChange={([min, max]) => onChange({ ...filters, engagementMin: min, engagementMax: max })} />
+            </div>
+
+            {/* Avg Views range */}
+            <div>
+              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">
+                Avg Views: {formatNumber(filters.followersMin)} – {formatNumber(filters.followersMax)}
+              </label>
+              <Slider min={0} max={10000000} step={10000} value={[filters.followersMin, filters.followersMax]} onValueChange={([min, max]) => onChange({ ...filters, followersMin: min, followersMax: max })} />
             </div>
 
             {/* Country */}
@@ -159,12 +165,7 @@ export default function InfluencerFilters({ filters, onChange }: Props) {
             <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 block">Status</label>
             <div className="flex gap-2">
               {STATUSES.map(s => (
-                <Badge
-                  key={s}
-                  variant={filters.status === s ? 'default' : 'outline'}
-                  className="cursor-pointer select-none"
-                  onClick={() => onChange({ ...filters, status: filters.status === s ? '' : s })}
-                >
+                <Badge key={s} variant={filters.status === s ? 'default' : 'outline'} className="cursor-pointer select-none" onClick={() => onChange({ ...filters, status: filters.status === s ? '' : s })}>
                   {s}
                 </Badge>
               ))}
