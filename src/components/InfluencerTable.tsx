@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { Influencer, Status } from '@/types/influencer';
 import { formatNumber } from '@/hooks/useInfluencers';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -27,6 +28,8 @@ function engagementColor(rate: number): string {
 }
 
 export default function InfluencerTable({ influencers, onSelect, selectedId }: Props) {
+  const navigate = useNavigate();
+
   if (influencers.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
@@ -59,7 +62,7 @@ export default function InfluencerTable({ influencers, onSelect, selectedId }: P
               <TableRow
                 key={inf.id}
                 className={`cursor-pointer transition-colors hover:bg-muted/30 ${selectedId === inf.id ? 'bg-primary/5' : ''}`}
-                onClick={() => onSelect(inf)}
+                onClick={() => navigate(`/influencer/${inf.id}`)}
               >
                 <TableCell>
                   <div className="flex items-center gap-3">
