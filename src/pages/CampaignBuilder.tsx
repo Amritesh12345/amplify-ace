@@ -1,31 +1,16 @@
 import { useState } from 'react';
 import Layout from '@/components/Layout';
 import { useInfluencers, useCampaigns, formatNumber, downloadCSV } from '@/hooks/useInfluencers';
-import { Influencer, CampaignInfluencer, Campaign, DELIVERABLES, Deliverable } from '@/types/influencer';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { CampaignInfluencer, CampaignStatus } from '@/types/influencer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Megaphone, Plus, Copy, Trash2, Download, Users, Eye, Heart, IndianRupee, Pencil } from 'lucide-react';
-
-const DELIVERABLE_OPTIONS = ['Reel', 'Story', 'Post', 'Video', 'Shorts', 'Carousel'] as const;
-
-interface DeliverableRow {
-  type: string;
-  cost: number;
-  enabled: boolean;
-}
-
-interface InfluencerDeliverables {
-  influencerId: string;
-  deliverables: DeliverableRow[];
-  notes: string;
-}
+import { CampaignOverview } from '@/components/campaign/CampaignOverview';
+import { MediaPlanTable } from '@/components/campaign/MediaPlanTable';
+import { CampaignBriefEditor } from '@/components/campaign/CampaignBriefEditor';
+import { CampaignTimeline } from '@/components/campaign/CampaignTimeline';
+import { Megaphone, Plus, Copy, Trash2, Download, Pencil } from 'lucide-react';
 
 export default function CampaignBuilder() {
   const { campaignReady, allInfluencers } = useInfluencers();
@@ -36,33 +21,8 @@ export default function CampaignBuilder() {
   const [renameId, setRenameId] = useState<string | null>(null);
   const [renameName, setRenameName] = useState('');
 
-  // Local deliverables state (per influencer, multiple deliverables)
-  const [localDeliverables, setLocalDeliverables] = useState<Record<string, InfluencerDeliverables>>({});
-
   const activeCampaign = campaigns.find(c => c.id === activeCampaignId) || null;
-
   const getInfluencer = (id: string) => allInfluencers.find(i => i.id === id);
-
-  const getDeliverables = (influencerId: string, inf: Influencer): DeliverableRow[] => {
-    if (localDeliverables[influencerId]) return localDeliverables[influencerId].deliverables;
-    const estReel = Math.round(inf.avgViews * 0.15);
-    const estStory = Math.round(inf.avgViews * 0.05);
-    const estYT = Math.round(inf.avgViews * 0.30);
-    return [
-      { type: 'Reel', cost: estReel, enabled: true },
-      { type: 'Story', cost: estStory, enabled: false },
-      { type: 'Video', cost: estYT, enabled: inf.platform === 'YouTube' },
-    ];
-  };
-
-  const updateDeliverable = (influencerId: string, inf: Influencer, idx: number, data: Partial<DeliverableRow>) => {
-    const current = getDeliverables(influencerId, inf);
-    const updated = current.map((d, i) => i === idx ? { ...d, ...data } : d);
-    setLocalDeliverables(prev => ({
-      ...prev,
-      [influencerId]: { influencerId, deliverables: updated, notes: prev[influencerId]?.notes || '' },
-    }));
-  };
 
   const handleCreate = () => {
     if (!newName.trim()) return;
@@ -71,53 +31,6 @@ export default function CampaignBuilder() {
     setActiveCampaignId(campaign.id);
     setNewName('');
     setShowCreate(false);
-    setLocalDeliverables({});
-  };
-
-  // Summary calculations
-  const summary = activeCampaign ? (() => {
-    let totalCost = 0;
-    let totalFollowers = 0;
-    let totalImpressions = 0;
-    let totalEngagement = 0;
-
-    activeCampaign.influencers.forEach(ci => {
-      const inf = getInfluencer(ci.influencerId);
-      if (!inf) return;
-      totalFollowers += inf.followers;
-      const dels = getDeliverables(ci.influencerId, inf);
-      dels.forEach(d => {
-        if (d.enabled) {
-          totalCost += d.cost;
-          totalImpressions += inf.avgViews;
-          totalEngagement += Math.round(inf.avgViews * inf.engagementRate / 100);
-        }
-      });
-    });
-
-    return {
-      count: activeCampaign.influencers.length,
-      totalFollowers,
-      totalImpressions,
-      totalEngagement,
-      totalCost,
-    };
-  })() : null;
-
-  const exportCampaignCSV = () => {
-    if (!activeCampaign) return;
-    const headers = ['Influencer', 'Platform', 'Followers', 'Deliverable', 'Cost (₹)', 'Enabled'];
-    const rows: string[][] = [];
-    activeCampaign.influencers.forEach(ci => {
-      const inf = getInfluencer(ci.influencerId);
-      if (!inf) return;
-      const dels = getDeliverables(ci.influencerId, inf);
-      dels.forEach(d => {
-        rows.push([inf.name, inf.platform, String(inf.followers), d.type, String(d.cost), d.enabled ? 'Yes' : 'No']);
-      });
-    });
-    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
-    downloadCSV(csv, `${activeCampaign.name}.csv`);
   };
 
   const handleRename = () => {
@@ -127,6 +40,30 @@ export default function CampaignBuilder() {
     setRenameName('');
   };
 
+  const handleUpdateInfluencer = (influencerId: string, data: Partial<CampaignInfluencer>) => {
+    if (!activeCampaign) return;
+    updateCampaign(activeCampaign.id, {
+      influencers: activeCampaign.influencers.map(ci =>
+        ci.influencerId === influencerId ? { ...ci, ...data } : ci
+      ),
+    });
+  };
+
+  const exportCampaignCSV = () => {
+    if (!activeCampaign) return;
+    const headers = ['Influencer', 'Platform', 'Followers', 'Deliverable', 'Qty', 'Cost/Unit (₹)', 'Total (₹)', 'Status', 'Post Date'];
+    const rows: string[][] = [];
+    activeCampaign.influencers.forEach(ci => {
+      const inf = getInfluencer(ci.influencerId);
+      if (!inf) return;
+      ci.deliverables.forEach(d => {
+        rows.push([inf.name, inf.platform, String(inf.followers), d.type, String(d.quantity), String(d.costPerUnit), String(d.costPerUnit * d.quantity), ci.status, ci.postDate || '']);
+      });
+    });
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    downloadCSV(csv, `${activeCampaign.name}.csv`);
+  };
+
   return (
     <Layout>
       <div className="p-6 space-y-5 overflow-auto h-full">
@@ -134,9 +71,9 @@ export default function CampaignBuilder() {
           <div>
             <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
               <Megaphone className="h-6 w-6 text-primary" />
-              Campaign Builder
+              Campaign Planner
             </h1>
-            <p className="text-sm text-muted-foreground mt-0.5">Plan campaigns with deliverables and live budget tracking</p>
+            <p className="text-sm text-muted-foreground mt-0.5">Plan campaigns with deliverables, timelines, and live budget tracking</p>
           </div>
           <Button size="sm" onClick={() => setShowCreate(true)}>
             <Plus className="h-4 w-4 mr-1.5" /> New Campaign
@@ -148,7 +85,7 @@ export default function CampaignBuilder() {
           <div className="flex gap-2 flex-wrap">
             {campaigns.map(c => (
               <div key={c.id} className="flex items-center gap-1">
-                <Badge variant={activeCampaignId === c.id ? 'default' : 'outline'} className="cursor-pointer select-none px-3 py-1.5" onClick={() => { setActiveCampaignId(c.id); setLocalDeliverables({}); }}>
+                <Badge variant={activeCampaignId === c.id ? 'default' : 'outline'} className="cursor-pointer select-none px-3 py-1.5" onClick={() => setActiveCampaignId(c.id)}>
                   {c.name}
                 </Badge>
                 <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => { setRenameId(c.id); setRenameName(c.name); }}><Pencil className="h-3 w-3" /></Button>
@@ -161,84 +98,37 @@ export default function CampaignBuilder() {
           </div>
         )}
 
-        {/* Summary cards */}
-        {summary && (
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-            <SummaryCard icon={Users} label="Influencers" value={summary.count.toString()} />
-            <SummaryCard icon={Users} label="Total Reach" value={formatNumber(summary.totalFollowers)} />
-            <SummaryCard icon={Eye} label="Est. Impressions" value={formatNumber(summary.totalImpressions)} />
-            <SummaryCard icon={Heart} label="Est. Engagements" value={formatNumber(summary.totalEngagement)} />
-            <SummaryCard icon={IndianRupee} label="Total Cost" value={`₹${formatNumber(summary.totalCost)}`} />
-          </div>
-        )}
-
-        {/* Campaign table with deliverables */}
         {activeCampaign && activeCampaign.influencers.length > 0 ? (
-          <>
+          <div className="space-y-5">
+            <CampaignOverview
+              campaign={activeCampaign}
+              getInfluencer={getInfluencer}
+              onStatusChange={status => updateCampaign(activeCampaign.id, { status })}
+            />
+
             <div className="flex justify-end">
               <Button variant="outline" size="sm" onClick={exportCampaignCSV}>
                 <Download className="h-4 w-4 mr-1.5" /> Export CSV
               </Button>
             </div>
-            <div className="space-y-4">
-              {activeCampaign.influencers.map(ci => {
-                const inf = getInfluencer(ci.influencerId);
-                if (!inf) return null;
-                const dels = getDeliverables(ci.influencerId, inf);
-                const totalForInf = dels.filter(d => d.enabled).reduce((s, d) => s + d.cost, 0);
 
-                return (
-                  <Card key={ci.influencerId}>
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10 ring-2 ring-border">
-                            <AvatarImage src={inf.profilePhoto} alt={inf.name} />
-                            <AvatarFallback className="text-xs bg-primary/10 text-primary font-semibold">{inf.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium text-sm">{inf.name}</p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <Badge variant="outline" className="text-xs">{inf.platform}</Badge>
-                              <span className="text-xs text-muted-foreground">{formatNumber(inf.followers)} followers</span>
-                            </div>
-                          </div>
-                        </div>
-                        <p className="font-semibold text-sm">₹{formatNumber(totalForInf)}</p>
-                      </div>
+            <MediaPlanTable
+              campaign={activeCampaign}
+              getInfluencer={getInfluencer}
+              onUpdateInfluencer={handleUpdateInfluencer}
+            />
 
-                      <div className="border border-border rounded-md overflow-hidden">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-muted/30">
-                              <TableHead className="w-10"></TableHead>
-                              <TableHead>Deliverable</TableHead>
-                              <TableHead>Cost (₹)</TableHead>
-                              <TableHead className="text-right">Est. Views</TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {dels.map((d, idx) => (
-                              <TableRow key={idx} className={!d.enabled ? 'opacity-40' : ''}>
-                                <TableCell>
-                                  <Checkbox checked={d.enabled} onCheckedChange={v => updateDeliverable(ci.influencerId, inf, idx, { enabled: !!v })} />
-                                </TableCell>
-                                <TableCell className="text-sm font-medium">{d.type}</TableCell>
-                                <TableCell>
-                                  <Input type="number" className="h-8 w-28" value={d.cost || ''} onChange={e => updateDeliverable(ci.influencerId, inf, idx, { cost: parseInt(e.target.value) || 0 })} />
-                                </TableCell>
-                                <TableCell className="text-right text-sm text-muted-foreground">{formatNumber(inf.avgViews)}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+            <div className="grid lg:grid-cols-2 gap-5">
+              <CampaignBriefEditor
+                brief={activeCampaign.brief}
+                onChange={brief => updateCampaign(activeCampaign.id, { brief })}
+              />
+              <CampaignTimeline
+                campaign={activeCampaign}
+                getInfluencer={getInfluencer}
+              />
             </div>
-          </>
+          </div>
         ) : activeCampaign ? (
           <EmptyState text="No influencers in this campaign" sub='Mark influencers as "Planned" or "Confirmed" to include them' />
         ) : (
@@ -273,22 +163,6 @@ export default function CampaignBuilder() {
         </Dialog>
       </div>
     </Layout>
-  );
-}
-
-function SummaryCard({ icon: Icon, label, value }: { icon: any; label: string; value: string }) {
-  return (
-    <Card>
-      <CardContent className="p-4 flex items-center gap-3">
-        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-          <Icon className="h-4 w-4 text-primary" />
-        </div>
-        <div>
-          <p className="text-[11px] text-muted-foreground">{label}</p>
-          <p className="font-semibold text-lg leading-tight">{value}</p>
-        </div>
-      </CardContent>
-    </Card>
   );
 }
 

@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Influencer, Filters, Status, Campaign, CampaignInfluencer, InfluencerSubmission, AgencySubmission, AnySubmission } from '@/types/influencer';
+import { Influencer, Filters, Status, Campaign, CampaignInfluencer, InfluencerSubmission, AgencySubmission, AnySubmission, CampaignDeliverable } from '@/types/influencer';
 import { mockInfluencers } from '@/data/mockInfluencers';
 
 const STORAGE_KEY = 'influencer-data';
@@ -142,10 +142,9 @@ export function useCampaigns() {
       const inf = allInfluencers.find(i => i.id === id);
       return {
         influencerId: id,
-        deliverable: 'Reel' as const,
-        proposedCost: 0,
-        expectedViews: inf?.avgViews || 0,
-        expectedEngagement: inf ? Math.round(inf.avgViews * inf.engagementRate / 100) : 0,
+        deliverables: [{ type: 'Reel' as const, quantity: 1, costPerUnit: Math.round((inf?.avgViews || 0) * 0.15) }],
+        status: 'Planned' as const,
+        postDate: '',
         notes: '',
       };
     });
@@ -153,6 +152,8 @@ export function useCampaigns() {
       id: crypto.randomUUID(),
       name,
       createdAt: new Date().toISOString(),
+      status: 'Draft',
+      brief: { objective: '', contentGuidelines: '', hashtags: '', postingWindow: '' },
       influencers: campaignInfluencers,
     };
     updateAll([campaign, ...campaigns]);
