@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo } from 'react';
-import { Influencer, Filters, Status, Campaign, CampaignInfluencer, InfluencerSubmission, AgencySubmission, AnySubmission } from '@/types/influencer';
+import { Influencer, Filters, Status, Campaign, CampaignInfluencer, InfluencerSubmission, AgencySubmission, AnySubmission, CampaignDeliverable } from '@/types/influencer';
 import { mockInfluencers } from '@/data/mockInfluencers';
 
 const STORAGE_KEY = 'influencer-data';
