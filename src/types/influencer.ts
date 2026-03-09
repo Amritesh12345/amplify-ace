@@ -44,10 +44,23 @@ export interface CampaignInfluencer {
   notes: string;
 }
 
+export type CampaignStatus = 'Draft' | 'Planning' | 'Outreach' | 'Live' | 'Completed';
+
+export const CAMPAIGN_STATUSES: CampaignStatus[] = ['Draft', 'Planning', 'Outreach', 'Live', 'Completed'];
+
+export interface CampaignBrief {
+  objective: string;
+  contentGuidelines: string;
+  hashtags: string;
+  postingWindow: string;
+}
+
 export interface Campaign {
   id: string;
   name: string;
   createdAt: string;
+  status: CampaignStatus;
+  brief: CampaignBrief;
   influencers: CampaignInfluencer[];
 }
 
