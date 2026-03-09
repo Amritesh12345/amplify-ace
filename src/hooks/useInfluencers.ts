@@ -153,7 +153,8 @@ export function useCampaigns() {
       name,
       createdAt: new Date().toISOString(),
       status: 'Draft',
-      brief: { objective: '', contentGuidelines: '', hashtags: '', postingWindow: '' },
+      brief: { objective: '', targetAudience: '', contentTheme: '', contentGuidelines: '', hashtags: '', postingWindow: '' },
+      goals: { targetReach: 0, targetEngagement: 0, targetBudget: 0 },
       influencers: campaignInfluencers,
     };
     updateAll([campaign, ...campaigns]);
