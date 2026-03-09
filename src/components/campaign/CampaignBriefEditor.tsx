@@ -34,6 +34,24 @@ export function CampaignBriefEditor({ brief, onChange }: Props) {
           />
         </div>
         <div className="space-y-1.5">
+          <Label className="text-xs">Target Audience</Label>
+          <Textarea
+            placeholder="Who is the ideal audience? Demographics, interests..."
+            value={brief.targetAudience || ''}
+            onChange={e => update('targetAudience', e.target.value)}
+            className="min-h-[80px]"
+          />
+        </div>
+        <div className="space-y-1.5">
+          <Label className="text-xs">Content Theme / Concept</Label>
+          <Textarea
+            placeholder="Campaign theme, creative direction, mood..."
+            value={brief.contentTheme || ''}
+            onChange={e => update('contentTheme', e.target.value)}
+            className="min-h-[80px]"
+          />
+        </div>
+        <div className="space-y-1.5">
           <Label className="text-xs">Content Guidelines</Label>
           <Textarea
             placeholder="Key messaging, do's and don'ts..."

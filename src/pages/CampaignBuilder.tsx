@@ -10,6 +10,7 @@ import { CampaignOverview } from '@/components/campaign/CampaignOverview';
 import { MediaPlanTable } from '@/components/campaign/MediaPlanTable';
 import { CampaignBriefEditor } from '@/components/campaign/CampaignBriefEditor';
 import { CampaignTimeline } from '@/components/campaign/CampaignTimeline';
+import { CampaignGoalsSection } from '@/components/campaign/CampaignGoals';
 import { Megaphone, Plus, Copy, Trash2, Download, Pencil } from 'lucide-react';
 
 export default function CampaignBuilder() {
@@ -100,10 +101,22 @@ export default function CampaignBuilder() {
 
         {activeCampaign && activeCampaign.influencers.length > 0 ? (
           <div className="space-y-5">
+            <CampaignBriefEditor
+              brief={activeCampaign.brief}
+              onChange={brief => updateCampaign(activeCampaign.id, { brief })}
+            />
+
             <CampaignOverview
               campaign={activeCampaign}
               getInfluencer={getInfluencer}
               onStatusChange={status => updateCampaign(activeCampaign.id, { status })}
+            />
+
+            <CampaignGoalsSection
+              campaign={activeCampaign}
+              goals={activeCampaign.goals || { targetReach: 0, targetEngagement: 0, targetBudget: 0 }}
+              getInfluencer={getInfluencer}
+              onGoalsChange={goals => updateCampaign(activeCampaign.id, { goals })}
             />
 
             <div className="flex justify-end">
@@ -118,16 +131,10 @@ export default function CampaignBuilder() {
               onUpdateInfluencer={handleUpdateInfluencer}
             />
 
-            <div className="grid lg:grid-cols-2 gap-5">
-              <CampaignBriefEditor
-                brief={activeCampaign.brief}
-                onChange={brief => updateCampaign(activeCampaign.id, { brief })}
-              />
-              <CampaignTimeline
-                campaign={activeCampaign}
-                getInfluencer={getInfluencer}
-              />
-            </div>
+            <CampaignTimeline
+              campaign={activeCampaign}
+              getInfluencer={getInfluencer}
+            />
           </div>
         ) : activeCampaign ? (
           <EmptyState text="No influencers in this campaign" sub='Mark influencers as "Planned" or "Confirmed" to include them' />

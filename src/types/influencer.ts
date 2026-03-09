@@ -55,9 +55,17 @@ export const CAMPAIGN_STATUSES: CampaignStatus[] = ['Draft', 'Planning', 'Outrea
 
 export interface CampaignBrief {
   objective: string;
+  targetAudience: string;
+  contentTheme: string;
   contentGuidelines: string;
   hashtags: string;
   postingWindow: string;
+}
+
+export interface CampaignGoals {
+  targetReach: number;
+  targetEngagement: number;
+  targetBudget: number;
 }
 
 export interface Campaign {
@@ -66,6 +74,7 @@ export interface Campaign {
   createdAt: string;
   status: CampaignStatus;
   brief: CampaignBrief;
+  goals: CampaignGoals;
   influencers: CampaignInfluencer[];
 }
 
