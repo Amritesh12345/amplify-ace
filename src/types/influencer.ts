@@ -35,12 +35,17 @@ export interface Influencer {
   recentContent: string[];
 }
 
+export interface CampaignDeliverable {
+  type: Deliverable;
+  quantity: number;
+  costPerUnit: number;
+}
+
 export interface CampaignInfluencer {
   influencerId: string;
-  deliverable: Deliverable;
-  proposedCost: number;
-  expectedViews: number;
-  expectedEngagement: number;
+  deliverables: CampaignDeliverable[];
+  status: 'Planned' | 'Contacted' | 'Confirmed';
+  postDate: string;
   notes: string;
 }
 
