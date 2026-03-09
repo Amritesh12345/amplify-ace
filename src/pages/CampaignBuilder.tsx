@@ -10,6 +10,7 @@ import { CampaignOverview } from '@/components/campaign/CampaignOverview';
 import { MediaPlanTable } from '@/components/campaign/MediaPlanTable';
 import { CampaignBriefEditor } from '@/components/campaign/CampaignBriefEditor';
 import { CampaignTimeline } from '@/components/campaign/CampaignTimeline';
+import { CampaignGoalsSection } from '@/components/campaign/CampaignGoals';
 import { Megaphone, Plus, Copy, Trash2, Download, Pencil } from 'lucide-react';
 
 export default function CampaignBuilder() {
